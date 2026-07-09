@@ -1,0 +1,32 @@
+## CURSOR RULES (copy into `.cursorrules`)
+
+```
+You are building ExamMarker per PROJECT_SPEC.md. Always read it before major work.
+
+Environment: Windows 10, PowerShell. Give PowerShell commands (venv\Scripts\activate,
+not source). Celery dev commands must use --pool=solo. Poppler is installed and on PATH.
+
+Principles:
+1. Small steps. Implement exactly what is asked for the current phase; do not build
+   ahead. After each task, tell me exactly how to run and test it.
+2. Never invent API behavior. The Anthropic call signature and marking JSON schema are
+   defined in PROJECT_SPEC.md and prompt_v3.md; if unsure, ask.
+3. Marking data is immutable — corrections are appended rows, never UPDATEs.
+4. All money-grade arithmetic (totals, percentages) is recomputed in Python; never
+   trust model arithmetic.
+5. Secrets only in .env (gitignored). Never print or commit ANTHROPIC_API_KEY.
+6. Every new module gets at least one pytest test; external APIs are faked in tests.
+7. Type hints everywhere; Pydantic v2 models for all request/response bodies.
+8. If a library approach fails twice, stop and propose an alternative instead of
+   thrashing.
+9. When you finish a task, output: files changed, how to test, and a one-line
+   conventional commit message.
+```
+
+## DEFINITION OF DONE (v1)
+
+A lecturer can: log in → create a course + paste marking scheme → create a batch →
+drag in 50 scanned PDFs → click Start → watch progress → open any script and see the
+scan beside the per-mark-point breakdown → override a score with a reason → file an
+appeal that re-marks one question → download an Excel summary. Every score is traceable
+to scheme point + student's words, and nothing marking-related is ever deleted.
