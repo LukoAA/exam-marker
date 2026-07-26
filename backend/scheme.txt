@@ -1,0 +1,9 @@
+Q1 (10 marks): Define an operating system and state its functions.
+  1a. Correct definition of an operating system ......... 4 marks
+  1b. Any three functions (memory mgmt, process mgmt,
+      file mgmt, I/O, security) @ 2 marks each .......... 6 marks
+
+Q2 (10 marks): Differentiate between compiler and interpreter.
+  2a. Compiler translates whole program at once ......... 3 marks
+  2b. Interpreter translates line by line .............. 3 marks
+  2c. Any two further valid differences @ 2 marks ...... 4 marks
