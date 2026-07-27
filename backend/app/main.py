@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, batches, courses
+from app.routers import auth, batches, courses, scripts
 
 
 def create_app() -> FastAPI:
@@ -21,6 +21,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router)
     app.include_router(courses.router)
     app.include_router(batches.router)
+    app.include_router(scripts.router)
 
     return app
 
