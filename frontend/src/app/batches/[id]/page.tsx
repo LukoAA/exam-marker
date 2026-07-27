@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { ScriptUploader } from "@/components/script-uploader";
@@ -57,8 +58,18 @@ export default function BatchDetailPage() {
             </thead>
             <tbody>
               {batch.scripts.map((script) => (
-                <tr key={script.id} className="border-b border-zinc-100 last:border-0">
-                  <td className="px-4 py-3 text-zinc-900">{script.original_filename}</td>
+                <tr
+                  key={script.id}
+                  className="border-b border-zinc-100 last:border-0 hover:bg-zinc-50"
+                >
+                  <td className="px-4 py-3">
+                    <Link
+                      href={`/scripts/${script.id}`}
+                      className="text-zinc-900 underline-offset-2 hover:underline"
+                    >
+                      {script.original_filename}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 text-zinc-600">{script.page_count ?? "—"}</td>
                   <td className="px-4 py-3">
                     <StatusChip status={script.status} kind="script" />
