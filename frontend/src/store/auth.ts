@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -27,3 +28,21 @@ export const useAuthStore = create<AuthState>()(
     { name: "exam-marker-auth" }
   )
 );
+
+// zustand's `persist` rehydrates from localStorage asynchronously, so on the
+// first client render `token`/`user` are still null even for a logged-in
+// user. Consumers that redirect on missing auth must wait for this to flip
+// true before treating a null token as "logged out".
+export function useAuthHydrated() {
+  const [hydrated, setHydrated] = useState(() => useAuthStore.persist.hasHydrated());
+
+  useEffect(() => {
+    if (useAuthStore.persist.hasHydrated()) {
+      setHydrated(true);
+      return;
+    }
+    return useAuthStore.persist.onFinishHydration(() => setHydrated(true));
+  }, []);
+
+  return hydrated;
+}
