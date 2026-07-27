@@ -120,13 +120,16 @@ def test_get_batch_not_owner_returns_404(client):
     assert resp.status_code == 404
 
 
-def test_upload_pdf_creates_script_and_pages(client_with_storage):
+def test_upload_pdf_creates_script_and_pages(client_with_storage, tmp_path):
     client = client_with_storage
     headers = _auth_headers(client)
     course, scheme = _create_course_and_scheme(client, headers)
     batch_id = _create_batch(client, headers, course["id"], scheme["id"]).json()["id"]
     pdf_bytes = _make_test_pdf_bytes()
 
+    # Genuine multipart upload: a real (filename, bytes, content_type) file part,
+    # not a plain form field — this is what a browser file <input> or FastAPI's
+    # own Swagger "Try it out" sends for a `list[UploadFile] = File(...)` param.
     resp = client.post(
         f"/batches/{batch_id}/scripts",
         files=[("files", ("script1.pdf", pdf_bytes, "application/pdf"))],
@@ -136,9 +139,18 @@ def test_upload_pdf_creates_script_and_pages(client_with_storage):
     assert resp.status_code == 201
     scripts = resp.json()
     assert len(scripts) == 1
-    assert scripts[0]["original_filename"] == "script1.pdf"
-    assert scripts[0]["status"] == "queued"
-    assert scripts[0]["page_count"] == 1
+    script = scripts[0]
+    assert script["original_filename"] == "script1.pdf"
+    assert script["status"] == "queued"
+    assert script["page_count"] == 1
+
+    script_dir = tmp_path / "batches" / str(batch_id) / "scripts" / str(script["id"])
+    original_pdf_path = script_dir / "original.pdf"
+    page_1_path = script_dir / "pages" / "1.png"
+    assert original_pdf_path.is_file()
+    assert original_pdf_path.read_bytes() == pdf_bytes
+    assert page_1_path.is_file()
+    assert page_1_path.stat().st_size > 0
 
     detail = client.get(f"/batches/{batch_id}", headers=headers)
     assert detail.status_code == 200
