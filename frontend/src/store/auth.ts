@@ -33,15 +33,25 @@ export const useAuthStore = create<AuthState>()(
 // first client render `token`/`user` are still null even for a logged-in
 // user. Consumers that redirect on missing auth must wait for this to flip
 // true before treating a null token as "logged out".
+//
+// `useAuthStore.persist` itself is only defined when `window` exists at store
+// creation time. Next.js server-renders client-component pages once on the
+// server (no `window`), so on that pass persist is skipped entirely and this
+// property is undefined — treat that as "hydrated" since there's no
+// localStorage to wait for there anyway; the real client bundle re-checks
+// after mount.
 export function useAuthHydrated() {
-  const [hydrated, setHydrated] = useState(() => useAuthStore.persist.hasHydrated());
+  const [hydrated, setHydrated] = useState(
+    () => useAuthStore.persist?.hasHydrated() ?? true
+  );
 
   useEffect(() => {
-    if (useAuthStore.persist.hasHydrated()) {
+    const persistApi = useAuthStore.persist;
+    if (!persistApi || persistApi.hasHydrated()) {
       setHydrated(true);
       return;
     }
-    return useAuthStore.persist.onFinishHydration(() => setHydrated(true));
+    return persistApi.onFinishHydration(() => setHydrated(true));
   }, []);
 
   return hydrated;

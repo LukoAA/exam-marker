@@ -103,6 +103,21 @@ def create_batch(
     return batch
 
 
+@router.get("", response_model=list[BatchOut])
+def list_batches(
+    course_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[Batch]:
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if course is None or course.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="course not found")
+
+    return (
+        db.query(Batch).filter(Batch.course_id == course_id).order_by(Batch.id).all()
+    )
+
+
 @router.get("/{batch_id}", response_model=BatchDetailOut)
 def get_batch(
     batch_id: int,

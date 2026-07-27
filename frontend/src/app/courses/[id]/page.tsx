@@ -2,12 +2,14 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
+import { StatusChip } from "@/components/status-chip";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { api } from "@/lib/api";
-import type { Course, MarkingScheme } from "@/lib/types";
+import type { Batch, Course, MarkingScheme } from "@/lib/types";
 
 export default function CourseDetailPage() {
   const { ready } = useRequireAuth();
@@ -26,13 +28,51 @@ export default function CourseDetailPage() {
     enabled: ready,
   });
 
+  const batchesQuery = useQuery({
+    queryKey: ["course", courseId, "batches"],
+    queryFn: async () => (await api.get<Batch[]>(`/batches?course_id=${courseId}`)).data,
+    enabled: ready,
+  });
+
   const [content, setContent] = useState("");
   const [selectionRule, setSelectionRule] = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const [showNewBatchForm, setShowNewBatchForm] = useState(false);
+  const [batchName, setBatchName] = useState("");
+  const [batchSchemeId, setBatchSchemeId] = useState("");
+  const [batchError, setBatchError] = useState<string | null>(null);
+  const [batchSubmitting, setBatchSubmitting] = useState(false);
+
   if (!ready) return null;
+
+  async function handleCreateBatch(event: React.FormEvent) {
+    event.preventDefault();
+    setBatchError(null);
+    setBatchSubmitting(true);
+
+    try {
+      await api.post("/batches", {
+        course_id: Number(courseId),
+        scheme_id: Number(batchSchemeId),
+        name: batchName,
+      });
+      setBatchName("");
+      setBatchSchemeId("");
+      setShowNewBatchForm(false);
+      await queryClient.invalidateQueries({ queryKey: ["course", courseId, "batches"] });
+    } catch (err) {
+      if (isAxiosError(err) && err.response) {
+        setBatchError(err.response.data?.detail ?? "Could not create batch");
+      } else {
+        setBatchError("Could not reach the server");
+      }
+    } finally {
+      setBatchSubmitting(false);
+    }
+  }
 
   async function handleAddScheme(event: React.FormEvent) {
     event.preventDefault();
@@ -78,6 +118,95 @@ export default function CourseDetailPage() {
             Total marks: {course.total_marks} · Language: {course.language}
           </p>
         </div>
+      )}
+
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-zinc-900">Batches</h2>
+        <button
+          type="button"
+          onClick={() => setShowNewBatchForm((v) => !v)}
+          className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-800"
+        >
+          New batch
+        </button>
+      </div>
+
+      {batchesQuery.isLoading && <p className="text-sm text-zinc-500">Loading…</p>}
+      {batchesQuery.isError && <p className="text-sm text-red-600">Could not load batches.</p>}
+      {batchesQuery.data && batchesQuery.data.length === 0 && !showNewBatchForm && (
+        <p className="mb-6 text-sm text-zinc-500">No batches yet. Create one to upload scripts.</p>
+      )}
+
+      <div className="mb-6 flex flex-col gap-3">
+        {batchesQuery.data?.map((batch) => (
+          <Link
+            key={batch.id}
+            href={`/batches/${batch.id}`}
+            className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-zinc-300 hover:shadow"
+          >
+            <span className="text-sm font-medium text-zinc-900">{batch.name}</span>
+            <StatusChip status={batch.status} kind="batch" />
+          </Link>
+        ))}
+      </div>
+
+      {showNewBatchForm && (
+        <form
+          onSubmit={handleCreateBatch}
+          className="mb-10 flex flex-col gap-4 rounded-lg border border-zinc-200 bg-white p-6 shadow-sm"
+        >
+          <div className="flex flex-col gap-1">
+            <label htmlFor="batch_name" className="text-sm font-medium text-zinc-700">
+              Batch name
+            </label>
+            <input
+              id="batch_name"
+              type="text"
+              required
+              placeholder="Midterm Batch"
+              value={batchName}
+              onChange={(e) => setBatchName(e.target.value)}
+              className="rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label htmlFor="batch_scheme" className="text-sm font-medium text-zinc-700">
+              Marking scheme version
+            </label>
+            <select
+              id="batch_scheme"
+              required
+              value={batchSchemeId}
+              onChange={(e) => setBatchSchemeId(e.target.value)}
+              className="rounded-md border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
+            >
+              <option value="" disabled>
+                Select a scheme version
+              </option>
+              {schemes?.map((scheme) => (
+                <option key={scheme.id} value={scheme.id}>
+                  Version {scheme.version}
+                </option>
+              ))}
+            </select>
+            {schemes && schemes.length === 0 && (
+              <p className="text-xs text-zinc-500">
+                Add a marking scheme version below before creating a batch.
+              </p>
+            )}
+          </div>
+
+          {batchError && <p className="text-sm text-red-600">{batchError}</p>}
+
+          <button
+            type="submit"
+            disabled={batchSubmitting}
+            className="mt-2 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+          >
+            {batchSubmitting ? "Creating…" : "Create batch"}
+          </button>
+        </form>
       )}
 
       <h2 className="mb-3 text-lg font-semibold text-zinc-900">Marking scheme versions</h2>

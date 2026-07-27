@@ -109,6 +109,43 @@ def test_create_batch_rejects_scheme_from_another_course(client):
     assert resp.status_code == 404
 
 
+def test_list_batches_for_course(client):
+    headers = _auth_headers(client)
+    course, scheme = _create_course_and_scheme(client, headers)
+    batch_1 = _create_batch(client, headers, course["id"], scheme["id"], name="Midterm").json()
+    batch_2 = _create_batch(client, headers, course["id"], scheme["id"], name="Final").json()
+
+    resp = client.get(f"/batches?course_id={course['id']}", headers=headers)
+
+    assert resp.status_code == 200
+    ids = [b["id"] for b in resp.json()]
+    assert ids == [batch_1["id"], batch_2["id"]]
+
+
+def test_list_batches_excludes_other_courses(client):
+    headers = _auth_headers(client)
+    course_1, scheme_1 = _create_course_and_scheme(client, headers, code="CSC301")
+    course_2, scheme_2 = _create_course_and_scheme(client, headers, code="MTH201")
+    _create_batch(client, headers, course_1["id"], scheme_1["id"], name="CSC batch")
+    _create_batch(client, headers, course_2["id"], scheme_2["id"], name="MTH batch")
+
+    resp = client.get(f"/batches?course_id={course_1['id']}", headers=headers)
+
+    assert resp.status_code == 200
+    names = [b["name"] for b in resp.json()]
+    assert names == ["CSC batch"]
+
+
+def test_list_batches_rejects_course_not_owned(client):
+    headers_a = _auth_headers(client, email="alice@example.com")
+    headers_b = _auth_headers(client, email="bob@example.com")
+    course, _scheme = _create_course_and_scheme(client, headers_a)
+
+    resp = client.get(f"/batches?course_id={course['id']}", headers=headers_b)
+
+    assert resp.status_code == 404
+
+
 def test_get_batch_not_owner_returns_404(client):
     headers_a = _auth_headers(client, email="alice@example.com")
     headers_b = _auth_headers(client, email="bob@example.com")
